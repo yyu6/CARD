@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>CARD Human-Likeness Study</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="paper-noise" aria-hidden="true"></div>
+
+    <header class="masthead">
+      <a class="brand" href="./" aria-label="CARD study home">
+        <span class="brand-mark">C</span>
+        <span>
+          <strong>CARD</strong>
+          <small>Human-Likeness Study</small>
+        </span>
+      </a>
+      <div class="study-status" id="study-status" hidden>
+        <span id="participant-label"></span>
+        <span class="status-rule"></span>
+        <span id="progress-label"></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="landing" id="landing">
+        <div class="landing-copy">
+          <p class="eyebrow">Blind comparison / Credit card discussions</p>
+          <h1>Which thread was written by <em>real people?</em></h1>
+          <p class="dek">
+            Compare two anonymized reply trees built around the same Reddit post.
+            Select the real discussion, or mark the pair as indistinguishable.
+          </p>
+        </div>
+
+        <aside class="protocol-card">
+          <span class="protocol-number">01</span>
+          <h2>Select your participant ID</h2>
+          <p>
+            Use only the ID assigned by the study coordinator. Your progress is
+            saved locally in this browser.
+          </p>
+          <div class="participant-grid" id="participant-grid"></div>
+          <p class="resume-note" id="resume-note"></p>
+        </aside>
+
+        <div class="study-facts" aria-label="Study protocol">
+          <article>
+            <span>36</span>
+            <p>paired comparisons per participant</p>
+          </article>
+          <article>
+            <span>3</span>
+            <p>independent votes for every pair</p>
+          </article>
+          <article>
+            <span>A / B / ?</span>
+            <p>real, generated, or cannot distinguish</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="study-shell" id="study-shell" hidden>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <div class="task-heading">
+          <div>
+            <p class="eyebrow" id="task-kicker">Comparison 01</p>
+            <h1>Read the post, then compare both reply trees.</h1>
+          </div>
+          <button class="text-button" id="instructions-button" type="button">
+            View instructions
+          </button>
+        </div>
+
+        <article class="seed-post">
+          <div class="post-rail">
+            <span class="reddit-orbit" aria-hidden="true"></span>
+            <span>Seed post</span>
+          </div>
+          <div class="post-copy">
+            <h2 id="post-title"></h2>
+            <div class="post-body-wrap" id="post-body-wrap">
+              <div id="post-body"></div>
+            </div>
+            <button class="text-button post-expand" id="post-expand" type="button" hidden>
+              Show full post
+            </button>
+          </div>
+        </article>
+
+        <div class="comparison-meta">
+          <span id="comment-count-label"></span>
+          <span>Authors and engagement metadata are anonymized</span>
+        </div>
+
+        <div class="thread-grid" id="thread-grid">
+          <article class="thread-panel" data-side="a">
+            <header>
+              <span class="thread-letter">A</span>
+              <div>
+                <h2>Thread A</h2>
+                <p>Reply structure preserved</p>
+              </div>
+            </header>
+            <div class="comment-tree" id="thread-a"></div>
+          </article>
+
+          <article class="thread-panel" data-side="b">
+            <header>
+              <span class="thread-letter">B</span>
+              <div>
+                <h2>Thread B</h2>
+                <p>Reply structure preserved</p>
+              </div>
+            </header>
+            <div class="comment-tree" id="thread-b"></div>
+          </article>
+        </div>
+
+        <section class="vote-dock" aria-labelledby="vote-question">
+          <div class="vote-copy">
+            <span class="protocol-number">02</span>
+            <div>
+              <h2 id="vote-question">Which discussion is real?</h2>
+              <p>Choose based on language, interaction, and reply coherence.</p>
+            </div>
+          </div>
+          <div class="vote-options" role="radiogroup" aria-label="Select the real thread">
+            <button class="vote-option" type="button" data-choice="a" role="radio" aria-checked="false">
+              <kbd>A</kbd>
+              <span>Thread A is real</span>
+            </button>
+            <button class="vote-option" type="button" data-choice="b" role="radio" aria-checked="false">
+              <kbd>B</kbd>
+              <span>Thread B is real</span>
+            </button>
+            <button class="vote-option unsure" type="button" data-choice="cannot" role="radio" aria-checked="false">
+              <kbd>?</kbd>
+              <span>Cannot distinguish</span>
+            </button>
+          </div>
+          <div class="navigation-row">
+            <button class="secondary-button" id="back-button" type="button">Previous</button>
+            <span class="validation-message" id="validation-message" role="status"></span>
+            <button class="primary-button" id="next-button" type="button">
+              Save &amp; continue
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="completion" id="completion" hidden>
+        <div class="completion-mark" aria-hidden="true">✓</div>
+        <p class="eyebrow">All comparisons complete</p>
+        <h1>Your response file is ready.</h1>
+        <p>
+          Download the JSON file and send it to the study coordinator. No
+          answer key or correctness feedback is stored in this page.
+        </p>
+        <div class="completion-actions">
+          <button class="primary-button" id="download-json" type="button">
+            Download JSON
+          </button>
+          <button class="secondary-button" id="download-csv" type="button">
+            Download CSV
+          </button>
+        </div>
+        <button class="text-button" id="review-button" type="button">Review responses</button>
+      </section>
+    </main>
+
+    <dialog id="instructions-dialog">
+      <form method="dialog">
+        <button class="dialog-close" aria-label="Close instructions">×</button>
+        <p class="eyebrow">Study protocol</p>
+        <h2>Judge the discussion, not the formatting.</h2>
+        <ol>
+          <li>The original post is identical for Thread A and Thread B.</li>
+          <li>Both sides show the same number of comments.</li>
+          <li>Reply indentation preserves the source thread structure.</li>
+          <li>Author names, timestamps, scores, and model labels are hidden.</li>
+          <li>Select “Cannot distinguish” when neither side appears more real.</li>
+        </ol>
+        <button class="primary-button" value="close">Return to study</button>
+      </form>
+    </dialog>
+
+    <template id="comment-template">
+      <article class="comment">
+        <div class="comment-spine" aria-hidden="true"></div>
+        <div class="comment-card">
+          <div class="comment-author"></div>
+          <p class="comment-content"></p>
+        </div>
+        <div class="comment-replies"></div>
+      </article>
+    </template>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

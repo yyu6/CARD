@@ -1,0 +1,10 @@
+{
+  "study_id": "card-human-likeness-v1",
+  "participant_count": 5,
+  "tasks_per_participant": 36,
+  "choices": [
+    "a",
+    "b",
+    "cannot"
+  ]
+}
