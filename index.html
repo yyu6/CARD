@@ -158,14 +158,14 @@
       <section class="completion" id="completion" hidden>
         <div class="completion-mark" aria-hidden="true">✓</div>
         <p class="eyebrow">All comparisons complete</p>
-        <h1>Email your responses.</h1>
+        <h1>Submit your responses anonymously.</h1>
         <p id="completion-copy">
-          Open a prefilled response email, then click Send in your email app.
-          A JSON backup is available if the email does not open.
+          Submit your completed study without providing your name or email
+          address. A JSON backup remains available if submission fails.
         </p>
         <div class="completion-actions">
           <button class="primary-button" id="submit-responses" type="button">
-            Open response email
+            Submit responses
           </button>
           <button class="secondary-button" id="download-json" type="button">
             Download JSON backup
@@ -174,21 +174,20 @@
         <p class="submission-status" id="submission-status" role="status"></p>
         <div class="backup-instructions" id="backup-instructions" hidden>
           <p>
-            If no prefilled email opened, download the JSON backup and attach
-            it manually to an email to
-            <a id="coordinator-email" href="mailto:yyn030600@gmail.com">yyn030600@gmail.com</a>.
+            Anonymous submission could not be confirmed. Your answers remain
+            saved in this browser. Try again, or download the JSON backup and
+            keep it until an anonymous upload link is provided.
           </p>
-          <p>
-            Use this subject:
-            <code id="backup-email-subject">CARD Human-Likeness Study Response</code>
-          </p>
-          <a class="secondary-button email-button" id="email-backup" href="#">
-            Open backup email
-          </a>
         </div>
         <button class="text-button" id="download-csv" type="button">Download CSV backup</button>
         <button class="text-button" id="review-button" type="button">Review responses</button>
       </section>
+      <iframe
+        id="submission-frame"
+        name="submission-frame"
+        title="Anonymous response submission"
+        hidden
+      ></iframe>
     </main>
 
     <dialog id="instructions-dialog">

@@ -742,19 +742,6 @@ kbd {
   line-height: 1.55;
 }
 
-.backup-instructions code {
-  color: var(--ink);
-  font-family: var(--mono);
-  overflow-wrap: anywhere;
-}
-
-.email-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
-
 dialog {
   width: min(620px, calc(100% - 32px));
   padding: 0;

@@ -5,6 +5,7 @@ const state = {
   currentIndex: 0,
   responses: {},
   submissionId: null,
+  submission: null,
 };
 
 const elements = {
@@ -34,11 +35,9 @@ const elements = {
   downloadCsv: document.querySelector("#download-csv"),
   submitResponses: document.querySelector("#submit-responses"),
   submissionStatus: document.querySelector("#submission-status"),
+  submissionFrame: document.querySelector("#submission-frame"),
   completionCopy: document.querySelector("#completion-copy"),
   backupInstructions: document.querySelector("#backup-instructions"),
-  coordinatorEmail: document.querySelector("#coordinator-email"),
-  backupEmailSubject: document.querySelector("#backup-email-subject"),
-  emailBackup: document.querySelector("#email-backup"),
   reviewButton: document.querySelector("#review-button"),
   commentTemplate: document.querySelector("#comment-template"),
 };
@@ -118,6 +117,7 @@ async function loadParticipant(participantId) {
   const local = loadLocalState(participantId);
   state.responses = local.responses || {};
   state.submissionId = local.submission_id || createSubmissionId(participantId);
+  state.submission = local.submission || null;
   state.currentIndex = firstIncompleteIndex();
 
   const url = new URL(window.location.href);
@@ -215,6 +215,7 @@ function saveAndContinue() {
     choice,
     recorded_at: new Date().toISOString(),
   };
+  state.submission = null;
   persist();
 
   if (state.currentIndex >= state.study.tasks.length - 1) {
@@ -267,6 +268,7 @@ function persist() {
       participant_id: state.participantId,
       responses: state.responses,
       submission_id: state.submissionId,
+      submission: state.submission,
       updated_at: new Date().toISOString(),
     }),
   );
@@ -300,67 +302,120 @@ function responsePayload() {
 }
 
 function configureCompletion() {
-  const email = state.manifest.coordinator_email || "yyn030600@gmail.com";
-  const subject = `CARD Human-Likeness Study Response - ${state.participantId}`;
-  elements.coordinatorEmail.textContent = email;
-  elements.coordinatorEmail.href = `mailto:${email}`;
-  elements.backupEmailSubject.textContent = subject;
-  elements.emailBackup.href = responseEmailUrl(email, subject);
-  elements.submitResponses.hidden = false;
-  elements.backupInstructions.hidden = true;
+  const configured = validSubmissionConfig();
+  elements.submitResponses.hidden = !configured;
+  elements.backupInstructions.hidden = configured;
   elements.submissionStatus.textContent = "";
   elements.submissionStatus.classList.remove("error");
   elements.submitResponses.disabled = false;
-  elements.submitResponses.textContent = "Open response email";
-  elements.completionCopy.textContent =
-    "Open a prefilled response email, then click Send in your email app. A JSON backup is available if the email does not open.";
+  elements.submitResponses.textContent = "Submit responses";
+  if (state.submission?.status === "submitted") {
+    elements.submitResponses.hidden = false;
+    elements.submitResponses.disabled = true;
+    elements.submitResponses.textContent = "Submitted";
+    elements.submissionStatus.textContent =
+      `Anonymous response ${state.participantId} was submitted successfully.`;
+    elements.backupInstructions.hidden = true;
+    return;
+  }
+  elements.completionCopy.textContent = configured
+    ? "Submit your completed study without providing your name or email address. A JSON backup remains available if submission fails."
+    : "Anonymous submission is being configured. Download a JSON backup and keep it; do not send it by email.";
 }
 
-function submitResponses() {
+async function submitResponses() {
   if (Object.keys(state.responses).length !== state.study.task_count) {
     elements.submissionStatus.textContent =
-      "Complete all comparisons before opening the response email.";
+      "Complete all comparisons before submitting.";
     elements.submissionStatus.classList.add("error");
     return;
   }
-
-  const email = state.manifest.coordinator_email || "yyn030600@gmail.com";
-  const subject = `CARD Human-Likeness Study Response - ${state.participantId}`;
-  elements.submissionStatus.textContent =
-    "A prefilled email draft should now be open. Click Send in your email app.";
-  elements.submissionStatus.classList.remove("error");
-  elements.backupInstructions.hidden = false;
-  window.location.href = responseEmailUrl(email, subject);
-}
-
-function responseEmailUrl(email, subject) {
-  const body = [
-    "CARD Human-Likeness Study Response",
-    "",
-    "Please keep the response block below unchanged.",
-    "",
-    "CARD_RESPONSE_START",
-    JSON.stringify(compactResponsePayload()),
-    "CARD_RESPONSE_END",
-    "",
-    "If the response block is missing, attach the downloaded JSON backup instead.",
-  ].join("\n");
-  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
-function compactResponsePayload() {
-  const responses = {};
-  for (const task of state.study.tasks) {
-    const response = state.responses[task.item_id];
-    if (response) responses[task.pair_id] = response.choice;
+  if (!validSubmissionConfig()) {
+    showSubmissionFailure("Anonymous submission is not configured yet.");
+    return;
   }
-  return {
-    study_id: state.study.study_id,
-    participant_id: state.participantId,
-    submission_id: state.submissionId,
-    response_count: Object.keys(responses).length,
-    responses,
+
+  elements.submitResponses.disabled = true;
+  elements.submitResponses.textContent = "Submitting...";
+  elements.submissionStatus.textContent = "Submitting anonymously...";
+  elements.submissionStatus.classList.remove("error");
+
+  try {
+    await postToAnonymousForm(responsePayload());
+    state.submission = {
+      status: "submitted",
+      submission_id: state.submissionId,
+      submitted_at: new Date().toISOString(),
+    };
+    persist();
+    elements.submitResponses.textContent = "Submitted";
+    elements.submissionStatus.textContent =
+      `Anonymous response ${state.participantId} was submitted successfully.`;
+    elements.backupInstructions.hidden = true;
+  } catch (error) {
+    console.error(error);
+    showSubmissionFailure(
+      "Anonymous submission could not be confirmed. Try again or keep the JSON backup.",
+    );
+  }
+}
+
+function postToAnonymousForm(payload) {
+  const config = state.manifest.submission;
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = config.form_action;
+  form.target = elements.submissionFrame.name;
+  form.hidden = true;
+
+  const fields = {
+    [config.participant_field]: payload.participant_id,
+    [config.response_count_field]: String(payload.response_count),
+    [config.payload_field]: JSON.stringify(payload),
   };
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement("textarea");
+    input.name = name;
+    input.value = value;
+    form.append(input);
+  }
+  document.body.append(form);
+
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Anonymous submission timed out"));
+    }, 20000);
+    const onLoad = () => {
+      cleanup();
+      resolve();
+    };
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      elements.submissionFrame.removeEventListener("load", onLoad);
+      form.remove();
+    };
+    elements.submissionFrame.addEventListener("load", onLoad);
+    form.submit();
+  });
+}
+
+function validSubmissionConfig() {
+  const config = state.manifest?.submission;
+  return Boolean(
+    config?.form_action &&
+      config?.participant_field &&
+      config?.response_count_field &&
+      config?.payload_field,
+  );
+}
+
+function showSubmissionFailure(message) {
+  elements.submissionStatus.textContent = message;
+  elements.submissionStatus.classList.add("error");
+  elements.backupInstructions.hidden = false;
+  elements.submitResponses.disabled = false;
+  elements.submitResponses.textContent = "Try submission again";
 }
 
 function createSubmissionId(participantId) {
