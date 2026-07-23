@@ -714,6 +714,47 @@ kbd {
   margin: 30px 0 20px;
 }
 
+.submission-status {
+  min-height: 24px;
+  margin: 0 auto 18px;
+  color: var(--forest);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.submission-status.error {
+  color: var(--vermillion);
+}
+
+.backup-instructions {
+  max-width: 580px;
+  margin: 24px auto;
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: var(--paper-deep);
+  text-align: left;
+}
+
+.backup-instructions p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.backup-instructions code {
+  color: var(--ink);
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.email-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 dialog {
   width: min(620px, calc(100% - 32px));
   padding: 0;

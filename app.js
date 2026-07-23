@@ -4,6 +4,7 @@ const state = {
   participantId: null,
   currentIndex: 0,
   responses: {},
+  submissionId: null,
 };
 
 const elements = {
@@ -31,6 +32,13 @@ const elements = {
   instructionsDialog: document.querySelector("#instructions-dialog"),
   downloadJson: document.querySelector("#download-json"),
   downloadCsv: document.querySelector("#download-csv"),
+  submitResponses: document.querySelector("#submit-responses"),
+  submissionStatus: document.querySelector("#submission-status"),
+  completionCopy: document.querySelector("#completion-copy"),
+  backupInstructions: document.querySelector("#backup-instructions"),
+  coordinatorEmail: document.querySelector("#coordinator-email"),
+  backupEmailSubject: document.querySelector("#backup-email-subject"),
+  emailBackup: document.querySelector("#email-backup"),
   reviewButton: document.querySelector("#review-button"),
   commentTemplate: document.querySelector("#comment-template"),
 };
@@ -94,6 +102,7 @@ function wireEvents() {
   elements.postExpand.addEventListener("click", togglePostBody);
   elements.downloadJson.addEventListener("click", downloadJson);
   elements.downloadCsv.addEventListener("click", downloadCsv);
+  elements.submitResponses.addEventListener("click", submitResponses);
   elements.reviewButton.addEventListener("click", () => {
     elements.completion.hidden = true;
     elements.studyShell.hidden = false;
@@ -108,6 +117,7 @@ async function loadParticipant(participantId) {
   state.participantId = participantId;
   const local = loadLocalState(participantId);
   state.responses = local.responses || {};
+  state.submissionId = local.submission_id || createSubmissionId(participantId);
   state.currentIndex = firstIncompleteIndex();
 
   const url = new URL(window.location.href);
@@ -227,6 +237,7 @@ function showCompletion() {
   elements.studyStatus.hidden = false;
   elements.progressLabel.textContent = `${Object.keys(state.responses).length} / ${state.study.task_count} saved`;
   elements.progressFill.style.width = "100%";
+  configureCompletion();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -255,6 +266,7 @@ function persist() {
       study_id: state.study.study_id,
       participant_id: state.participantId,
       responses: state.responses,
+      submission_id: state.submissionId,
       updated_at: new Date().toISOString(),
     }),
   );
@@ -280,10 +292,82 @@ function responsePayload() {
   return {
     study_id: state.study.study_id,
     participant_id: state.participantId,
+    submission_id: state.submissionId,
     exported_at: new Date().toISOString(),
     response_count: ordered.length,
     responses: ordered,
   };
+}
+
+function configureCompletion() {
+  const email = state.manifest.coordinator_email || "yyn030600@gmail.com";
+  const subject = `CARD Human-Likeness Study Response - ${state.participantId}`;
+  elements.coordinatorEmail.textContent = email;
+  elements.coordinatorEmail.href = `mailto:${email}`;
+  elements.backupEmailSubject.textContent = subject;
+  elements.emailBackup.href = responseEmailUrl(email, subject);
+  elements.submitResponses.hidden = false;
+  elements.backupInstructions.hidden = true;
+  elements.submissionStatus.textContent = "";
+  elements.submissionStatus.classList.remove("error");
+  elements.submitResponses.disabled = false;
+  elements.submitResponses.textContent = "Open response email";
+  elements.completionCopy.textContent =
+    "Open a prefilled response email, then click Send in your email app. A JSON backup is available if the email does not open.";
+}
+
+function submitResponses() {
+  if (Object.keys(state.responses).length !== state.study.task_count) {
+    elements.submissionStatus.textContent =
+      "Complete all comparisons before opening the response email.";
+    elements.submissionStatus.classList.add("error");
+    return;
+  }
+
+  const email = state.manifest.coordinator_email || "yyn030600@gmail.com";
+  const subject = `CARD Human-Likeness Study Response - ${state.participantId}`;
+  elements.submissionStatus.textContent =
+    "A prefilled email draft should now be open. Click Send in your email app.";
+  elements.submissionStatus.classList.remove("error");
+  elements.backupInstructions.hidden = false;
+  window.location.href = responseEmailUrl(email, subject);
+}
+
+function responseEmailUrl(email, subject) {
+  const body = [
+    "CARD Human-Likeness Study Response",
+    "",
+    "Please keep the response block below unchanged.",
+    "",
+    "CARD_RESPONSE_START",
+    JSON.stringify(compactResponsePayload()),
+    "CARD_RESPONSE_END",
+    "",
+    "If the response block is missing, attach the downloaded JSON backup instead.",
+  ].join("\n");
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function compactResponsePayload() {
+  const responses = {};
+  for (const task of state.study.tasks) {
+    const response = state.responses[task.item_id];
+    if (response) responses[task.pair_id] = response.choice;
+  }
+  return {
+    study_id: state.study.study_id,
+    participant_id: state.participantId,
+    submission_id: state.submissionId,
+    response_count: Object.keys(responses).length,
+    responses,
+  };
+}
+
+function createSubmissionId(participantId) {
+  const randomPart =
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${state.manifest.study_id}-${participantId}-${randomPart}`;
 }
 
 function downloadJson() {

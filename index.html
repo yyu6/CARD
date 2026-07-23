@@ -158,19 +158,35 @@
       <section class="completion" id="completion" hidden>
         <div class="completion-mark" aria-hidden="true">✓</div>
         <p class="eyebrow">All comparisons complete</p>
-        <h1>Your response file is ready.</h1>
-        <p>
-          Download the JSON file and send it to the study coordinator. No
-          answer key or correctness feedback is stored in this page.
+        <h1>Email your responses.</h1>
+        <p id="completion-copy">
+          Open a prefilled response email, then click Send in your email app.
+          A JSON backup is available if the email does not open.
         </p>
         <div class="completion-actions">
-          <button class="primary-button" id="download-json" type="button">
-            Download JSON
+          <button class="primary-button" id="submit-responses" type="button">
+            Open response email
           </button>
-          <button class="secondary-button" id="download-csv" type="button">
-            Download CSV
+          <button class="secondary-button" id="download-json" type="button">
+            Download JSON backup
           </button>
         </div>
+        <p class="submission-status" id="submission-status" role="status"></p>
+        <div class="backup-instructions" id="backup-instructions" hidden>
+          <p>
+            If no prefilled email opened, download the JSON backup and attach
+            it manually to an email to
+            <a id="coordinator-email" href="mailto:yyn030600@gmail.com">yyn030600@gmail.com</a>.
+          </p>
+          <p>
+            Use this subject:
+            <code id="backup-email-subject">CARD Human-Likeness Study Response</code>
+          </p>
+          <a class="secondary-button email-button" id="email-backup" href="#">
+            Open backup email
+          </a>
+        </div>
+        <button class="text-button" id="download-csv" type="button">Download CSV backup</button>
         <button class="text-button" id="review-button" type="button">Review responses</button>
       </section>
     </main>
