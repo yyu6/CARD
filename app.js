@@ -2,11 +2,14 @@ const state = {
   manifest: null,
   study: null,
   participantId: null,
+  accessCode: "",
   currentIndex: 0,
   responses: {},
   submissionId: null,
   submission: null,
 };
+
+const DEFAULT_NETLIFY_FORM_NAME = "card-human-likeness";
 
 const elements = {
   landing: document.querySelector("#landing"),
@@ -57,7 +60,9 @@ async function init() {
   renderParticipantButtons();
   wireEvents();
 
-  const requested = new URLSearchParams(window.location.search).get("participant");
+  const params = new URLSearchParams(window.location.search);
+  const requested = params.get("participant");
+  state.accessCode = params.get("code")?.trim() || "";
   if (requested) {
     const normalized = normalizeParticipantId(requested);
     if (normalized) {
@@ -303,6 +308,7 @@ function responsePayload() {
 
 function configureCompletion() {
   const configured = validSubmissionConfig();
+  const endpointConfigured = hasSubmissionEndpoint();
   elements.submitResponses.hidden = !configured;
   elements.backupInstructions.hidden = configured;
   elements.submissionStatus.textContent = "";
@@ -318,9 +324,16 @@ function configureCompletion() {
     elements.backupInstructions.hidden = true;
     return;
   }
-  elements.completionCopy.textContent = configured
-    ? "Submit your completed study without providing your name or email address. A JSON backup remains available if submission fails."
-    : "Anonymous submission is being configured. Download a JSON backup and keep it; do not send it by email.";
+  if (configured) {
+    elements.completionCopy.textContent =
+      "Submit your completed study without providing your name or email address. A JSON backup remains available if submission fails.";
+  } else if (endpointConfigured && requiresAccessCode() && !state.accessCode) {
+    elements.completionCopy.textContent =
+      "Open the participant link assigned by the study coordinator to submit anonymously. Your answers remain saved in this browser.";
+  } else {
+    elements.completionCopy.textContent =
+      "Anonymous submission is being configured. Download a JSON backup and keep it; do not send it by email.";
+  }
 }
 
 async function submitResponses() {
@@ -361,17 +374,52 @@ async function submitResponses() {
 }
 
 function postToAnonymousForm(payload) {
+  const provider = submissionProvider();
+  if (provider === "netlify") {
+    return postToNetlifyForm(payload);
+  }
+  if (provider === "apps_script") {
+    return postToAppsScriptForm(payload);
+  }
+  return Promise.reject(new Error(`Unsupported submission provider: ${provider}`));
+}
+
+async function postToNetlifyForm(payload) {
+  const formName = netlifyFormName();
+  const fields = {
+    "form-name": formName,
+    "bot-field": "",
+    study_id: payload.study_id,
+    participant_id: payload.participant_id,
+    submission_id: payload.submission_id,
+    response_count: String(payload.response_count),
+    payload: JSON.stringify(payload),
+  };
+  const response = await fetch("/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: new URLSearchParams(fields).toString(),
+  });
+  if (!response.ok) {
+    throw new Error(`Netlify form submission failed: ${response.status}`);
+  }
+  return { ok: true, provider: "netlify" };
+}
+
+function postToAppsScriptForm(payload) {
   const config = state.manifest.submission;
   const form = document.createElement("form");
   form.method = "POST";
   form.action = config.form_action;
   form.target = elements.submissionFrame.name;
+  form.acceptCharset = "UTF-8";
   form.hidden = true;
 
   const fields = {
     [config.participant_field]: payload.participant_id,
     [config.response_count_field]: String(payload.response_count),
     [config.payload_field]: JSON.stringify(payload),
+    [config.access_code_field]: state.accessCode,
   };
   for (const [name, value] of Object.entries(fields)) {
     const input = document.createElement("textarea");
@@ -386,28 +434,70 @@ function postToAnonymousForm(payload) {
       cleanup();
       reject(new Error("Anonymous submission timed out"));
     }, 20000);
-    const onLoad = () => {
+
+    const onMessage = (event) => {
+      if (event.source !== elements.submissionFrame.contentWindow) return;
+      const result = event.data;
+      if (!result || result.type !== "card-submission-result") return;
+      if (result.submission_id && result.submission_id !== payload.submission_id) return;
       cleanup();
-      resolve();
+      if (result.ok) {
+        resolve(result);
+      } else {
+        reject(new Error(result.error || "Anonymous submission was rejected"));
+      }
     };
+
     const cleanup = () => {
       window.clearTimeout(timeout);
-      elements.submissionFrame.removeEventListener("load", onLoad);
+      window.removeEventListener("message", onMessage);
       form.remove();
     };
-    elements.submissionFrame.addEventListener("load", onLoad);
+
+    window.addEventListener("message", onMessage);
     form.submit();
   });
 }
 
 function validSubmissionConfig() {
+  const provider = submissionProvider();
+  if (provider === "netlify") {
+    return Boolean(netlifyFormName());
+  }
+  if (provider === "apps_script") {
+    return hasSubmissionEndpoint() && Boolean(state.accessCode);
+  }
+  return false;
+}
+
+function hasSubmissionEndpoint() {
+  const provider = submissionProvider();
+  if (provider === "netlify") {
+    return Boolean(netlifyFormName());
+  }
+  if (provider !== "apps_script") {
+    return false;
+  }
   const config = state.manifest?.submission;
   return Boolean(
     config?.form_action &&
       config?.participant_field &&
       config?.response_count_field &&
-      config?.payload_field,
+      config?.payload_field &&
+      config?.access_code_field,
   );
+}
+
+function requiresAccessCode() {
+  return submissionProvider() === "apps_script";
+}
+
+function submissionProvider() {
+  return state.manifest?.submission?.provider || "netlify";
+}
+
+function netlifyFormName() {
+  return state.manifest?.submission?.form_name || DEFAULT_NETLIFY_FORM_NAME;
 }
 
 function showSubmissionFailure(message) {

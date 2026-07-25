@@ -188,6 +188,21 @@
         title="Anonymous response submission"
         hidden
       ></iframe>
+      <form
+        name="card-human-likeness"
+        method="POST"
+        data-netlify="true"
+        netlify-honeypot="bot-field"
+        hidden
+      >
+        <input type="hidden" name="form-name" value="card-human-likeness" />
+        <input type="hidden" name="study_id" />
+        <input type="hidden" name="participant_id" />
+        <input type="hidden" name="submission_id" />
+        <input type="hidden" name="response_count" />
+        <input type="hidden" name="bot-field" />
+        <textarea name="payload"></textarea>
+      </form>
     </main>
 
     <dialog id="instructions-dialog">

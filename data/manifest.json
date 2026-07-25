@@ -6,5 +6,9 @@
     "a",
     "b",
     "cannot"
-  ]
+  ],
+  "submission": {
+    "provider": "netlify",
+    "form_name": "card-human-likeness"
+  }
 }
