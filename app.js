@@ -1,3 +1,9 @@
+if (window.location.hostname === "yyu6.github.io") {
+  window.location.replace(
+    `https://card-human-likeness.netlify.app${window.location.search}${window.location.hash}`,
+  );
+}
+
 const state = {
   manifest: null,
   study: null,
